@@ -1,0 +1,4 @@
+.board_state/
+__pycache__/
+*.py[cod]
+.env
