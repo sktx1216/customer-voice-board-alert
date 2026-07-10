@@ -3,6 +3,7 @@ import os
 import re
 import smtplib
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -20,6 +21,7 @@ STATE_FILE = Path(os.getenv("STATE_FILE", ".board_state/last_seen.json"))
 MAIL_TO = "ssk1024@2000fmc.or.kr"
 MAIL_SUBJECT = "[고객의 소리] 새 게시글 알림"
 REQUEST_TIMEOUT = 20
+REQUEST_RETRIES = 3
 
 
 @dataclass(frozen=True)
@@ -35,15 +37,23 @@ def log(message: str) -> None:
 
 
 def fetch_board_html(url: str = BOARD_URL) -> str:
-    try:
-        response = requests.get(
-            url,
-            timeout=REQUEST_TIMEOUT,
-            headers={"User-Agent": "board-alert/1.0"},
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        raise RuntimeError(f"게시판 접속 실패: {exc}") from exc
+    last_error: requests.RequestException | None = None
+    for attempt in range(1, REQUEST_RETRIES + 1):
+        try:
+            response = requests.get(
+                url,
+                timeout=REQUEST_TIMEOUT,
+                headers={"User-Agent": "board-alert/1.0"},
+            )
+            response.raise_for_status()
+            break
+        except requests.RequestException as exc:
+            last_error = exc
+            log(f"게시판 접속 실패({attempt}/{REQUEST_RETRIES}): {exc}")
+            if attempt < REQUEST_RETRIES:
+                time.sleep(5 * attempt)
+    else:
+        raise RuntimeError(f"게시판 접속 실패: {last_error}") from last_error
 
     if not response.text.strip():
         raise RuntimeError("게시판 접속 실패: 응답 본문이 비어 있습니다.")
