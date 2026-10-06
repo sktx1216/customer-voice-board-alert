@@ -5,6 +5,9 @@ on:
     - cron: "17 0-8 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   check-board:
     runs-on: ubuntu-latest
@@ -13,14 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Restore state
-        uses: actions/cache@v4
-        with:
-          path: .board_state
-          key: board-alert-state-${{ github.run_id }}
-          restore-keys: |
-            board-alert-state-
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,5 +33,15 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          STATE_FILE: .board_state/last_seen.json
+          STATE_FILE: data/board_state.json
         run: python check_board.py
+
+      - name: Save board state
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data/board_state.json
+          git diff --cached --quiet || git commit -m "Update board alert state"
+          git pull --rebase origin main
+          git push origin main

@@ -13,7 +13,7 @@
 ## 동작 방식
 
 - 각 게시판 목록 페이지에서 최신 게시글의 번호, 제목, 등록일, 상세 링크를 추출합니다.
-- 마지막으로 확인한 게시글 번호는 게시판별로 `.board_state/last_seen.json`에 저장합니다.
+- 마지막으로 확인한 게시글 번호는 게시판별로 `data/board_state.json`에 저장합니다.
 - 첫 확인 게시판은 기존 게시글을 이메일로 보내지 않고 현재 최신 게시글 번호만 저장합니다.
 - 이후 실행부터 저장된 번호보다 큰 게시글이 있으면 모두 이메일 본문에 포함해 발송합니다.
 - 상세 링크가 상대경로이거나 JavaScript 이동 방식이면 절대 URL로 변환합니다.
@@ -48,7 +48,7 @@ python check_board.py
 상태 파일 경로를 바꾸려면 `STATE_FILE` 환경변수를 추가로 설정하면 됩니다.
 
 ```bash
-export STATE_FILE=".board_state/last_seen.json"
+export STATE_FILE="data/board_state.json"
 ```
 
 ## GitHub Actions 설정
@@ -63,7 +63,7 @@ GitHub 저장소의 `Settings > Secrets and variables > Actions > Repository sec
 - `SMTP_PASS`
 - `MAIL_FROM`
 
-GitHub Actions 러너는 매번 새 환경에서 실행되므로 `.board_state/last_seen.json`은 Actions cache로 복원하고 저장합니다. 첫 확인 게시판에서는 현재 최신 번호만 저장하고 이메일은 보내지 않습니다.
+GitHub Actions는 `data/board_state.json`을 읽고 실행 후 상태를 저장소에 커밋합니다. 캐시 만료로 상태가 초기화되지 않으며, 상태 커밋이 지속적으로 생성되어 예약 워크플로 자동 비활성화도 방지합니다. 첫 확인 게시판에서는 현재 최신 번호만 저장하고 이메일은 보내지 않습니다.
 
 ## 파일 구성
 
